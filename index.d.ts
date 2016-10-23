@@ -1,4 +1,4 @@
-export declare class Proxy {
+export declare class HttpProxyMe {
     private port;
     private _app;
     private _requestId;
@@ -6,7 +6,7 @@ export declare class Proxy {
     /**
      * @return Proxy
      */
-    static createServer(port: number): Proxy;
+    static createServer(port: number): HttpProxyMe;
     private getProxyUrl(req);
     private logRequest(req, res);
     private setRoutes();

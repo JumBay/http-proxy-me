@@ -6,11 +6,18 @@ import * as request2 from "request";
 
 let request = request2.defaults({ jar: true });
 
+export class RedirectUrl {
+  constructor(public from: string, public to: string) {
+
+  }
+
+}
+
 export class HttpProxyMe {
   private _app: Express;
   private _requestId: number = 0;
 
-  constructor(private port: number) {
+  constructor(private port: number, private redirectUrls?: RedirectUrl[]) {
 
     this._app = express();
 
@@ -18,14 +25,19 @@ export class HttpProxyMe {
 
     this._app.listen(this.port, () => {
       console.log('server started on port', this.port);
+      if (this.redirectUrls) {
+        this.redirectUrls.forEach(redirectUrl => {
+          console.log('Redirect urls from', redirectUrl.from, 'to', redirectUrl.to);
+        })
+      }
     });
   }
 
   /**
    * @return Proxy
    */
-  static createServer(port: number): HttpProxyMe {
-    return new HttpProxyMe(+port);
+  static createServer(port: number, redirectUrls?: RedirectUrl[]): HttpProxyMe {
+    return new HttpProxyMe(+port, redirectUrls);
   }
 
 
@@ -35,7 +47,19 @@ export class HttpProxyMe {
       return null;
     }
 
-    return req.query.__proxy;
+    let url = req.query.__proxy;
+
+    if (this.redirectUrls) {
+      this.redirectUrls.forEach(redirectUrl => {
+        if (url.match(redirectUrl.from)) {
+          let newUrl = url.replace(redirectUrl.from, redirectUrl.to);
+          console.log('Change URL', url, 'to', newUrl);
+          url = newUrl;
+        }
+      })
+    }
+
+    return url;
   }
 
   private logRequest(req: express.Request, res: express.Response) {

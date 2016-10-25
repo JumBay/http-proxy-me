@@ -2,28 +2,52 @@
 var express = require("express");
 var request2 = require("request");
 var request = request2.defaults({ jar: true });
+var RedirectUrl = (function () {
+    function RedirectUrl(from, to) {
+        this.from = from;
+        this.to = to;
+    }
+    return RedirectUrl;
+}());
+exports.RedirectUrl = RedirectUrl;
 var HttpProxyMe = (function () {
-    function HttpProxyMe(port) {
+    function HttpProxyMe(port, redirectUrls) {
         var _this = this;
         this.port = port;
+        this.redirectUrls = redirectUrls;
         this._requestId = 0;
         this._app = express();
         this.setRoutes();
         this._app.listen(this.port, function () {
             console.log('server started on port', _this.port);
+            if (_this.redirectUrls) {
+                _this.redirectUrls.forEach(function (redirectUrl) {
+                    console.log('Redirect urls from', redirectUrl.from, 'to', redirectUrl.to);
+                });
+            }
         });
     }
     /**
      * @return Proxy
      */
-    HttpProxyMe.createServer = function (port) {
-        return new HttpProxyMe(+port);
+    HttpProxyMe.createServer = function (port, redirectUrls) {
+        return new HttpProxyMe(+port, redirectUrls);
     };
     HttpProxyMe.prototype.getProxyUrl = function (req) {
         if (!req.query.__proxy) {
             return null;
         }
-        return req.query.__proxy;
+        var url = req.query.__proxy;
+        if (this.redirectUrls) {
+            this.redirectUrls.forEach(function (redirectUrl) {
+                if (url.match(redirectUrl.from)) {
+                    var newUrl = url.replace(redirectUrl.from, redirectUrl.to);
+                    console.log('Change URL', url, 'to', newUrl);
+                    url = newUrl;
+                }
+            });
+        }
+        return url;
     };
     HttpProxyMe.prototype.logRequest = function (req, res) {
         this._requestId++;
